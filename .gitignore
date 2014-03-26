@@ -1,3 +1,8 @@
+#
+# GENERIC
+#
+
+# Python files
 *.py[cod]
 
 # C extensions
@@ -34,3 +39,13 @@ nosetests.xml
 .mr.developer.cfg
 .project
 .pydevproject
+
+
+#
+# REPOSITORY SPECIFIC
+#
+
+# Subdirectories for input, output and test data
+*\input*
+*\output*
+*\test*
