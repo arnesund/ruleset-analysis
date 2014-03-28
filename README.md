@@ -7,6 +7,8 @@ Analyze firewall traffic logs to determine which firewall rules are in use and w
 
 To be able to run the analysis as a Hadoop job, you need:
 
+ * Firewall config file as a text file (for example config file collected by RANCID)
+ * Firewall log files uploaded to HDFS
  * Hadoop tools installed, to be able to submit jobs to a cluster
    * You need the **hadoop** binary and the path to the **hadoop-streaming** jar file
    * Test availability of tools with **hadoop version** in a terminal
