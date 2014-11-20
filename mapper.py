@@ -6,6 +6,7 @@ import os
 import re
 import sys
 import shelve
+import os.path
 from firewallrule import FirewallRule
 
 DEBUG=False
@@ -82,10 +83,10 @@ months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 
 
 # Open database of firewall rules
 try:
-    acldb = shelve.open(config['ACCESSLIST_DATABASE'])
+    acldb = shelve.open(os.path.basename(config['ACCESSLIST_DATABASE']))
 except:
     sys.stderr.write('Unable to open access-list database ' + \
-        '("{0}"). '.format(config['ACCESSLIST_DATABASE']) + \
+        '("{0}"). '.format(os.path.basename(config['ACCESSLIST_DATABASE'])) + \
         'Did you remember to run preprocessor? Aborting mapper.\n')
     sys.exit(1)
 
