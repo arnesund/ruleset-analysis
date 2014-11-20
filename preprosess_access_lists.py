@@ -313,7 +313,7 @@ def main(configfile, verbose):
     # Check that path to accesslist database exists, try to create it if not
     shelvefile = config['ACCESSLIST_DATABASE']
     if not os.path.isfile(shelvefile):
-        if not os.path.isdir(os.path.dirname(shelvefile)):
+        if not os.path.dirname(shelvefile) == '' and not os.path.isdir(os.path.dirname(shelvefile)):
             try:
                 os.makedirs(os.path.dirname(shelvefile))
             except OSError as e:
