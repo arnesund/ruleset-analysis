@@ -18,28 +18,17 @@ To be able to run the analysis as a Hadoop job, you need:
    * Install with 'easy_install -U IPy' or get tarball from https://pypi.python.org/pypi/IPy
    * Ask your cluster administrator for help if you don't have access to installing packages on the cluster nodes
 
-## Quick start guide
+## Quick Start Guide
 
 Before launching your first analysis, first make sure all prerequisites listed above are met.
 
 To perform a ruleset-analysis, you need to complete the following steps:
- 1. Preprocess firewall config to create a database of accesslists
- 2. Launch the job on the cluster by running **runAnalysis.sh** with the HDFS path to log files as the only argument
- 3. Copy the result files to local disk
- 4. Run postprocessing script to generate the ruleset report
-
-A sample command set for these steps would be:
-
-```
-# 1. Preprocess
-./preprosess_access_lists.py -f <path_to_firewall_config_file>
-# 2. Launch job
-./runAnalysis.sh <HDFS_path_to_firewall_log_files>
-# 3. Copy results to local disk
-mkdir output
-OUTPUTDIR="<reported_output_dir_name_from_job_output>"
-hadoop dfs -getmerge $OUTPUTDIR output/$OUTPUTDIR
-# 4. Postprocess and view results
-./postprocess_ruleset_analysis.py -f output/$OUTPUTDIR > output/$OUTPUTDIR-postprocessed.log
-less output/$OUTPUTDIR-postprocessed.log
-```
+ 1. Preprocess firewall config to create a database of accesslists: `./preprosess_access_lists.py -f <INSERT_FILE_PATH>` with the path to the firewall config file as the only argument
+ 2. Launch the job on the cluster by running `./runAnalysis.sh <INSERT_HDFS_PATH>` with the HDFS path to log files (supplying more than one path is supported)
+ 3. Copy the result files to local disk:
+```mkdir output;
+outputdir="<INSERT_OUTPUT_PATH_FROM_JOB_OUTPUT>";
+hadoop dfs -getmerge $outputdir output/$outputdir```
+ 4. Run postprocessing script to generate the ruleset report:
+```./postprocess_ruleset_analysis.py -f output/$outputdir > output/$outputdir-postprocessed.log```
+ 5. Display results: `less output/$outputdir-postprocessed.log`
