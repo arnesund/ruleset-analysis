@@ -317,8 +317,8 @@ def main(configfile, verbose):
             try:
                 os.makedirs(os.path.dirname(shelvefile))
             except OSError as e:
-                logging.error('Path to accesslist DB file "{0}" does not exists, ' + \
-                    'and I\'m unable to create it. Aborting.'.format(shelvefile))
+                logging.error('Path to accesslist DB file "{0}" does not exists, '.format(shelvefile) + \
+                    'and I\'m unable to create it. Aborting.')
                 sys.exit(1)
     try:
         db = shelve.open(shelvefile)
