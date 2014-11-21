@@ -154,7 +154,12 @@ for line in sys.stdin:
                 conn.__init__(hostname, line, timestamp, direction, interface_in, interface_out, allowed, protocol, res[7], res[10], res[8], res[11])
 
             # Find relevant access-list
-            acl = firewalls[hostname][interface_in]['in']       # Only support for access-lists applied inbound to an interface at the moment
+            if interface_in in firewalls[hostname]:
+                acl = firewalls[hostname][interface_in]['in']       # Only support for access-lists applied inbound to an interface at the moment
+            else:
+                # No ACL on the incoming interface, skip line since there is no ACL to compare traffic against
+                continue
+
             # Validate info
             if acl not in accesslists[hostname]:
                 # Print error and skip line
