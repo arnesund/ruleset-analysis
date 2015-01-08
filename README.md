@@ -3,6 +3,10 @@ RulesetAnalysis
 
 Analyze firewall traffic logs to determine which firewall rules are in use and what traffic matched those rules. A typical use-case is to replace a generic rule with more specific rules better matching the traffic.
 
+## Walkthrough of the usage
+
+[Read this blog post](http://arnesund.com/2015/01/04/how-to-analyze-a-firewall-ruleset-with-hadoop/) for examples and a walkthrough of the usage.
+
 ## Prerequisites
 
 To be able to run the analysis as a Hadoop job, you need:
@@ -32,3 +36,4 @@ hadoop dfs -getmerge $outputdir output/$outputdir```
  4. Run postprocessing script to generate the ruleset report:
 ```./postprocess_ruleset_analysis.py -f output/$outputdir > output/$outputdir-postprocessed.log```
  5. Display results: `less output/$outputdir-postprocessed.log`
+
