@@ -3,6 +3,8 @@ RulesetAnalysis
 
 Analyze firewall traffic logs to determine which firewall rules are in use and what traffic matched those rules. A typical use-case is to replace a generic rule with more specific rules better matching the traffic.
 
+Currently Cisco ASA/FWSM and Fortinet FortiGate firewalls are supported. There is a separate preprocessor for each platform, and to create support for a new platform or rule syntax all that's needed is to add a new preprocessor for it. The analysis running on Hadoop is vendor-agnostic and only depends on rules and rulesets stored in an access-list database ("input/accesslists.db" in Python Shelve format).
+
 ## Walkthrough of the usage
 
 [Read this blog post](http://arnesund.com/2015/01/04/how-to-analyze-a-firewall-ruleset-with-hadoop/) for examples and a walkthrough of the usage.
