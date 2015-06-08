@@ -1,0 +1,3 @@
+[submodule "lib/fw-regex"]
+	path = lib/fw-regex
+	url = git@github.com:arnesund/fw-regex
