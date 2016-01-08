@@ -23,6 +23,7 @@ To be able to run the analysis as a Hadoop job, you need:
  * Python module 'IPy' installed on all cluster nodes
    * Install with 'easy_install -U IPy' or get tarball from https://pypi.python.org/pypi/IPy
    * Ask your cluster administrator for help if you don't have access to installing packages on the cluster nodes
+ * Git submodule 'fw-regex' checked out after checking out this repo: 'git submodule init && git submodule update'
 
 ## Quick Start Guide
 

@@ -46,6 +46,7 @@ $HADOOP_BIN/hadoop jar $HADOOP_CONTRIB/streaming/hadoop-streaming*.jar \
 -mapper  $SCRIPTDIR/mapper.py \
 -reducer $SCRIPTDIR/connlist-reducer.py \
 -file    $SCRIPTDIR/config.py \
+-file    $SCRIPTDIR/lib/fw-regex/libfwregex.py \
 -file    $SCRIPTDIR/firewallrule.py \
 -file    $SCRIPTDIR/input/accesslists.db \
 -file    $SCRIPTDIR/name-number-mappings.db \

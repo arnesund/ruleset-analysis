@@ -2,11 +2,13 @@
 #
 # Mapper job for firewall log analysis
 #
+import sys
+sys.path.append('lib/fw-regex')
 import os
 import re
-import sys
 import shelve
 import os.path
+from libfwregex import get_builtconn
 from firewallrule import FirewallRule
 
 DEBUG=False
@@ -74,19 +76,12 @@ class Connection(FirewallRule):
         self.dport = None
 
 
-# Regular expressions for info in "Built Connection"- message (Cisco-specific)
-regexBuiltConn = r'[a-zA-Z]+ [0-9 ]?[0-9] ([0-9:]+) ([a-zA-Z]+) ([0-9]+) ([0-9]+) .* Built (out|in)bound ([a-zA-Z]+) .* for ([a-zA-Z0-9_-]+):([0-9.]+)/([0-9]+) .* to ([a-zA-Z0-9_-]+):([0-9.]+)/([0-9]+)'
-BUILT = re.compile(regexBuiltConn)
-
-# Map month names to numbers
-months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-
 # Open database of firewall rules
 try:
-    acldb = shelve.open(config['ACCESSLIST_DATABASE'])
+    acldb = shelve.open(config['ACCESSLIST_DATABASE_FILENAME'])
 except:
     sys.stderr.write('Unable to open access-list database ' + \
-        '("{0}"). '.format(config['ACCESSLIST_DATABASE']) + \
+        '("{0}"). '.format(config['ACCESSLIST_DATABASE_FILENAME']) + \
         'Did you remember to run preprocessor? Aborting mapper.\n')
     sys.exit(1)
 
@@ -126,77 +121,70 @@ conn = None
 
 # Process each line of input
 for line in sys.stdin:
-    # Filter: Only process builtconn-messages (Cisco-specific)
-    if line.find('6-302013') != -1 or line.find('6-302015') != -1:
-        # Remove leading and trailing whitespace
-        line = line.strip()
-        # Extract info from message
-        match = re.search(BUILT, line)
-        if match:
-            # Find interesting fields to emit to reducer
-            res = match.groups()
-            # Create a timestamp
-            month = str(months.index(res[1])+1).zfill(2)
-            timestamp = res[3] + month + res[2].zfill(2) + '-' + res[0].replace(':', '')
+    data = get_builtconn(line)
+    if data:
+        # Create a timestamp
+        if data['year']:
+            timestamp = data['year'] + '-' + data['month'] + '-' + data['day'].zfill(2) + ' ' + data['time']
+        else:
+            # This timestamp is incomplete, no year info makes it impossible to piece a complete time together
+            timestamp = data['month'] + '-' + data['day'].zfill(2) + ' ' + data['time']
 
-            # Save interesting info
-            allowed = True      # Because the log message type is 302013 or 302015
-            direction = res[4]
-            protocol = res[5].lower()
-            interface_in = res[6]
-            interface_out = res[9]
+        # Save interesting info
+        allowed = True      # Because the log message is about Built Connections
+        protocol = data['protocol'].lower()
 
-            # Create or re-use connection object
-            if not conn:
-                conn = Connection(hostname, line, timestamp, direction, interface_in, interface_out, allowed, protocol, res[7], res[10], res[8], res[11])
+        # Create or re-use connection object
+        if not conn:
+            conn = Connection(hostname, line, timestamp, data['direction'], data['interface_in'], data['interface_out'], allowed, protocol.lower(), data['src'], data['dst'], data['sport'], data['dport'])
+        else:
+            conn.empty()
+            conn.__init__(hostname, line, timestamp, data['direction'], data['interface_in'], data['interface_out'], allowed, protocol.lower(), data['src'], data['dst'], data['sport'], data['dport'])
+
+        # Find relevant access-list
+        if data['interface_in'] in firewalls[hostname]:
+            acl = firewalls[hostname][data['interface_in']]['in']       # Only support for access-lists applied inbound to an interface at the moment
+        else:
+            # No ACL on the incoming interface, skip line since there is no ACL to compare traffic against
+            continue
+
+        # Validate info
+        if acl not in accesslists[hostname]:
+            # Print error and skip line
+            print('Unable to process line because access-list {0} is missing from data structure for host {1}, skipping line.'.format(acl, hostname))
+            print('The skipped line is: {0}'.format(line))
+            continue
+
+        # Find relevant rules for this connection
+        if protocol in ['tcp', 'udp']:
+            if protocol in accesslists[hostname][acl]['protocols']:
+                relevantrules = accesslists[hostname][acl]['protocols'][protocol] + accesslists[hostname][acl]['protocols']['ip']
+                relevantrules.sort()
             else:
-                conn.empty()
-                conn.__init__(hostname, line, timestamp, direction, interface_in, interface_out, allowed, protocol, res[7], res[10], res[8], res[11])
+                relevantrules = accesslists[hostname][acl]['protocols']['ip']
+        else:
+            relevantrules = accesslists[hostname][acl]['protocols'][protocol]
 
-            # Find relevant access-list
-            if interface_in in firewalls[hostname]:
-                acl = firewalls[hostname][interface_in]['in']       # Only support for access-lists applied inbound to an interface at the moment
-            else:
-                # No ACL on the incoming interface, skip line since there is no ACL to compare traffic against
-                continue
+        for ruleindex in relevantrules:
+            # Check if connection would be permitted by this rule
+            if conn in accesslists[hostname][acl]['rules'][ruleindex]:
+                if DEBUG:
+                    rule = accesslists[hostname][acl]['rules'][ruleindex]
+                    print('MATCH on firewall rule {0} of {1} for {2}'.format(rule.rulenum, acl, hostname))
+                    print('Connection   : {0}'.format(conn.logline))
+                    print('Firewall rule: {0}'.format(rule.original))
+                    print('Firewall rule: {0}'.format(repr(rule)))
+                    print('')
 
-            # Validate info
-            if acl not in accesslists[hostname]:
-                # Print error and skip line
-                print('Unable to process line because access-list {0} is missing from data structure for host {1}, skipping line.'.format(acl, hostname))
-                print('The skipped line is: {0}'.format(line))
-                continue
+                # Report to reducer
+                #
+                # Key is enough to uniquely identify the firewall rule that was matched
+                # Value is the original logline that matched
+                #
+                key = ';'.join([hostname, acl, str(ruleindex)])
+                value = conn.logline
+                print('\t'.join([key, value]))
 
-            # Find relevant rules for this connection
-            if protocol in ['tcp', 'udp']:
-                if protocol in accesslists[hostname][acl]['protocols']:
-                    relevantrules = accesslists[hostname][acl]['protocols'][protocol] + accesslists[hostname][acl]['protocols']['ip']
-                    relevantrules.sort()
-                else:
-                    relevantrules = accesslists[hostname][acl]['protocols']['ip']
-            else:
-                relevantrules = accesslists[hostname][acl]['protocols'][protocol]
-
-            for ruleindex in relevantrules:
-                # Check if connection would be permitted by this rule
-                if conn in accesslists[hostname][acl]['rules'][ruleindex]:
-                    if DEBUG:
-                        rule = accesslists[hostname][acl]['rules'][ruleindex]
-                        print('MATCH on firewall rule {0} of {1} for {2}'.format(rule.rulenum, acl, hostname))
-                        print('Connection   : {0}'.format(conn.logline))
-                        print('Firewall rule: {0}'.format(rule.original))
-                        print('Firewall rule: {0}'.format(repr(rule)))
-                        print('')
-
-                    # Report to reducer
-                    # 
-                    # Key is enough to uniquely identify the firewall rule that was matched
-                    # Value is the original logline that matched
-                    #
-                    key = ';'.join([hostname, acl, str(ruleindex)])
-                    value = conn.logline
-                    print('\t'.join([key, value]))
-
-                    # Don't check for more matching rules for this connection
-                    break
+                # Don't check for more matching rules for this connection
+                break
 
